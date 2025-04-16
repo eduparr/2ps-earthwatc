@@ -1,0 +1,167 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2PS Global EarthWatch – Painel de Monitoramento Planetário</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 2rem;
+    }
+    h1 {
+      color: #00ffcc;
+      text-align: center;
+    }
+    canvas {
+      background: #161b22;
+      border-radius: 12px;
+      padding: 1rem;
+      max-width: 600px;
+      margin: 2rem auto;
+      box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+    }
+    .info-box, .solar-section, .seismic-section, .health-section {
+      background: #1e2a44;
+      border-left: 4px solid #00ffcc;
+      padding: 1.5rem;
+      margin: 3rem auto;
+      max-width: 700px;
+      border-radius: 8px;
+    }
+    .info-box h2, .solar-section h2, .seismic-section h2, .health-section h2 {
+      color: #00ffcc;
+    }
+    #map {
+      height: 400px;
+      width: 100%;
+      margin-top: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(255, 168, 0, 0.3);
+    }
+    .risk-level {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-top: 1rem;
+    }
+    .low { color: #2ecc71; }
+    .moderate { color: #f1c40f; }
+    .high { color: #e74c3c; }
+  </style>
+</head>
+<body>
+  <h1>2PS Global EarthWatch</h1>
+  <div id="painel"></div>  <script>
+    async function carregarPainel2PS() {
+      const resposta = await fetch('2ps_earthwatch_diario.json');
+      const dados = await resposta.json();
+
+      const data = {
+        labels: Object.keys(dados.frequencias_schumann),
+        datasets: [{
+          label: 'Intensidade Média (Brilho)',
+          data: Object.values(dados.frequencias_schumann),
+          backgroundColor: 'rgba(0, 255, 204, 0.2)',
+          borderColor: '#00ffcc',
+          borderWidth: 2,
+          pointBackgroundColor: '#00ffcc'
+        }]
+      };
+
+      const painel = document.getElementById('painel');
+      painel.innerHTML = `
+        <canvas id="radarSchumann"></canvas>
+        <div class="info-box">
+          <h2>Análise Técnica – ${dados.data}</h2>
+          <p>Com base nos espectros VLF, a excitação espectral terrestre está elevada. Isso sugere influência de distúrbios solares e instabilidade regional atmosférica.</p>
+        </div>
+
+        <div class="solar-section">
+          <h2>Atividade Solar e Geomagnética</h2>
+          <p>Índice Kp nas últimas 72h: ${dados.indice_kp.ultimas_72h.join(', ')}</p>
+          <canvas id="kpChart"></canvas>
+        </div>
+
+        <div class="seismic-section">
+          <h2>Eventos Sísmicos Recentes</h2>
+          <p>Foram detectados ${dados.eventos_sismicos.length} eventos significativos nas últimas 24h.</p>
+          <div id="map"></div>
+        </div>
+
+        <div class="health-section">
+          <h2>Regulação Neurofisiológica e Risco Biológico</h2>
+          <p class="risk-level ${dados.risco_biologico.nivel === 2 ? 'moderate' : ''}">NÍVEL ${dados.risco_biologico.nivel} – ${dados.risco_biologico.classificacao}</p>
+          <ul>
+            ${dados.risco_biologico.recomendacoes.map(r => `<li>${r}</li>`).join('')}
+          </ul>
+          <p style="font-size:0.9rem;">Fontes: ${dados.risco_biologico.base_cientifica.join(', ')}</p>
+        </div>
+      `;
+
+      new Chart(document.getElementById('radarSchumann'), {
+        type: 'radar', data,
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: 'white' } },
+            title: { display: true, text: 'Radar de Frequência Schumann – ' + dados.data, color: 'white' }
+          },
+          scales: {
+            r: {
+              angleLines: { color: '#444' },
+              grid: { color: '#333' },
+              pointLabels: { color: 'white' },
+              ticks: { display: false }
+            }
+          }
+        }
+      });
+
+      new Chart(document.getElementById('kpChart'), {
+        type: 'line',
+        data: {
+          labels: ['-72h', '-48h', '-24h', 'Agora'],
+          datasets: [{
+            label: 'Índice Kp',
+            data: dados.indice_kp.ultimas_72h,
+            backgroundColor: 'rgba(255, 168, 0, 0.2)',
+            borderColor: '#ffaa00',
+            borderWidth: 2,
+            tension: 0.4
+          }]
+        },
+        options: {
+          scales: {
+            y: { beginAtZero: true, max: 9, ticks: { color: 'white' }, grid: { color: '#333' } },
+            x: { ticks: { color: 'white' }, grid: { color: '#333' } }
+          },
+          plugins: {
+            legend: { labels: { color: 'white' } },
+            title: { display: true, text: 'Índice Kp – Últimas 72 Horas', color: 'white' }
+          }
+        }
+      });
+
+      const map = L.map('map').setView([0, 0], 2);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
+      }).addTo(map);
+      dados.eventos_sismicos.forEach(s => {
+        L.circleMarker([s.lat, s.lon], {
+          radius: s.magnitude,
+          fillColor: '#ffaa00',
+          color: '#ff8800',
+          weight: 1,
+          opacity: 1,
+          fillOpacity: 0.6
+        }).bindPopup(`<strong>${s.local}</strong><br>Magnitude: ${s.magnitude}`).addTo(map);
+      });
+    }
+
+    carregarPainel2PS();
+  </script></body>
+</html>
