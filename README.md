@@ -11,7 +11,7 @@ https://eduparr.github.io/2ps-earthwatc/
 
 O **2PS EarthWatch** Ã© um painel cientÃ­fico de visualizaÃ§Ã£o em tempo real que integra dados sobre:
 
-- FrequÃªncia Schumann (eletromagnetismo natural da Terra)
+- FrequÃªncia Schumann ( Cumiana - eletromagnetismo natural da Terra)
 - Atividade solar e Ã­ndice Kp (NOAA)
 - Eventos sÃ­smicos globais (USGS)
 - Risco neurofisiolÃ³gico populacional
