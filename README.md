@@ -5,7 +5,7 @@
 **Desenvolvido por: Eduardo Parra (2PS)**  
 **URL do painel:** 
 
-[https://eduparr.github.io/2ps-earthwatc/]
+https://eduparr.github.io/2ps-earthwatc/
 
 ## VisÃ£o Geral
 
