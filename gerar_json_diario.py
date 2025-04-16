@@ -8,10 +8,9 @@ from datetime import datetime
 import random
 
 
-
 def baixar_espectrograma_cumiana(data):
- url = "http://www.vlf.it/cumiana/HourlyStrip.png"
-   print(f"Baixando imagem de Cumiana: {url}")
+    url = "http://www.vlf.it/cumiana/last-plotted.jpg"
+    print(f"Baixando imagem de Cumiana: {url}")
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
@@ -20,13 +19,15 @@ def baixar_espectrograma_cumiana(data):
         raise
     try:
         img = Image.open(BytesIO(response.content))
-        caminho_imagem = "espectrograma_cumiana.png"
+        caminho_imagem = "espectrograma_cumiana.jpg"
         img.save(caminho_imagem)
         print("Imagem salva com sucesso:", caminho_imagem)
         return caminho_imagem
     except Exception as e:
         print(f"Erro ao salvar ou abrir imagem: {e}")
         raise
+
+
 
 def processar_espectrograma(caminho_imagem, faixas_frequencia, altura_util, largura_util, margens):
     try:
