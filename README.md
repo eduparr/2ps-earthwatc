@@ -3,7 +3,9 @@
 ![Gerar JSON Diário](https://github.com/eduparr/2ps-earthwatc/actions/workflows/gerar-json-diario.yml/badge.svg)
 
 **Desenvolvido por: Eduardo Parra (2PS)**  
-**URL do painel:** [https://eduparr.github.io/2ps-earthwatch](https://seuusuario.github.io/2ps-earthwatch)
+**URL do painel:** 
+
+[https://eduparr.github.io/2ps-earthwatch](https://eduparr.github.io/2ps-earthwatch)
 
 ---
 
