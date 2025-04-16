@@ -1,5 +1,6 @@
+# 2PS EarthWatch – Painel de Monitoramento Planetário
 
-# 2PS EarthWatch â€“ Painel de Monitoramento PlanetÃ¡rio
+![Gerar JSON Diário](https://github.com/eduparr/2ps-earthwatc/actions/workflows/gerar-json-diario.yml/badge.svg)
 
 **Desenvolvido por: Eduardo Parra (2PS)**  
 **URL do painel:** [https://eduparr.github.io/2ps-earthwatch](https://seuusuario.github.io/2ps-earthwatch)
