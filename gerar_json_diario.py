@@ -7,9 +7,11 @@ import json
 from datetime import datetime
 import random
 
+
+
 def baixar_espectrograma_cumiana(data):
-    url = f"http://www.vlf.it/cumiana/strips/{data}.png"
-    print(f"Baixando imagem de Cumiana: {url}")
+ url = "http://www.vlf.it/cumiana/HourlyStrip.png"
+   print(f"Baixando imagem de Cumiana: {url}")
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
