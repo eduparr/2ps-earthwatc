@@ -31,6 +31,14 @@
       border-radius: 8px;
       margin: 2rem 0;
     }
+    #alertaNeuro {
+      padding: 1.2rem;
+      border-radius: 10px;
+      margin-top: 1rem;
+      color: white;
+      text-align: center;
+      font-size: 1.2rem;
+    }
   </style>
 </head>
 <body>
@@ -47,9 +55,56 @@
 
     <h2>Eventos Sísmicos Recentes</h2>
     <div id="map"></div>
+
+    <!-- NOVA CAMADA -->
+    <h2 style="color:#00ffcc;margin-top:3rem">Regulação Neurofisiológica e Risco Biológico</h2>
+    <div id="alertaNeuro">Carregando risco biológico...</div>
+    <div style="background:#1e2a44;padding:1.2rem;border-radius:10px;margin-top:1rem;">
+      <h3 style="color:#00ffcc;">Impactos Possíveis:</h3>
+      <ul>
+        <li>Distúrbios do sono (insônia, sonhos vívidos)</li>
+        <li>Instabilidade emocional, ansiedade</li>
+        <li>Cefaleias e alterações cardiovasculares leves</li>
+        <li>Desregulação autonômica (HRV alterado)</li>
+      </ul>
+      <h3 style="color:#00ffcc;">Recomendações de Regulação:</h3>
+      <ul id="recomendacoesBiologicas">
+        <li>Evite telas à noite e estímulos intensos</li>
+        <li>Use som isocrônico em 7.83 Hz</li>
+        <li>Banho morno e respiração profunda</li>
+      </ul>
+      <p style="margin-top:1rem;font-size:0.9rem;color:#bbb">
+        Fontes: Persinger (1995), Cherry (2002), König (1974), Geesink & Meijer (2020)
+      </p>
+    </div>
   </div>
 
   <script>
+    function atualizarRiscoBiologico(dados) {
+      const nivel = dados.risco_biologico.nivel;
+      const alerta = document.getElementById('alertaNeuro');
+      const recomendacoes = document.getElementById('recomendacoesBiologicas');
+
+      const cores = ['#2ecc71', '#f1c40f', '#e67e22', '#e74c3c'];
+      const textos = [
+        'Nível 0 – Estado de Coerência Vibracional Ideal',
+        'Nível 1 – Atenção Vibracional para Populações Sensíveis',
+        'Nível 2 – Risco Moderado de Instabilidade Neurofisiológica',
+        'Nível 3 – Alerta de Descoerência com Efeitos Perceptíveis'
+      ];
+
+      alerta.style.background = `linear-gradient(45deg, ${cores[nivel]}, ${cores[nivel]}90)`;
+      alerta.innerHTML = textos[nivel];
+
+      // Atualizar recomendações
+      recomendacoes.innerHTML = '';
+      dados.risco_biologico.recomendacoes.forEach(r => {
+        const item = document.createElement('li');
+        item.textContent = r;
+        recomendacoes.appendChild(item);
+      });
+    }
+
     async function carregarPainel2PS() {
       const resposta = await fetch('2ps_earthwatch_diario.json');
       const dados = await resposta.json();
@@ -118,7 +173,10 @@
           fillOpacity: 0.6
         }).bindPopup(`<strong>${s.local}</strong><br>Magnitude: ${s.magnitude}`).addTo(map);
       });
+
+      atualizarRiscoBiologico(dados);
     }
+
     carregarPainel2PS();
   </script>
 </body>
