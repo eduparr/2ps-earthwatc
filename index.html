@@ -6,6 +6,7 @@
   <title>2PS Global EarthWatch – Painel de Monitoramento Planetário</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.4.2/lib/p5.js"></script> <!-- Adicionado p5.js -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body {
@@ -38,6 +39,13 @@
       color: white;
       text-align: center;
       font-size: 1.2rem;
+    }
+    #toronCanvas {
+      display: block;
+      margin: 2rem auto;
+      background: #161b22;
+      border-radius: 12px;
+      padding: 1rem;
     }
   </style>
 </head>
@@ -77,9 +85,18 @@
         Fontes: Persinger (1995), Cherry (2002), König (1974), Geesink & Meijer (2020)
       </p>
     </div>
+
+    <!-- Nova Seção: Visualização de Torons -->
+    <h2 style="color:#00ffcc;margin-top:3rem">Campo Toroidal (ToE-2PS)</h2>
+    <p style="text-align:center;font-size:1rem;">
+      Visualização do campo ψ toroidal, pulsando com as frequências Schumann da Terra.
+    </p>
+    <div id="toronCanvas"></div>
   </div>
 
   <script>
+    let frequenciasSchumann = {}; // Armazenar as frequencias pra animação
+
     function atualizarRiscoBiologico(dados) {
       const nivel = dados.risco_biologico.nivel;
       const alerta = document.getElementById('alertaNeuro');
@@ -96,7 +113,6 @@
       alerta.style.background = `linear-gradient(45deg, ${cores[nivel]}, ${cores[nivel]}90)`;
       alerta.innerHTML = textos[nivel];
 
-      // Atualizar recomendações
       recomendacoes.innerHTML = '';
       dados.risco_biologico.recomendacoes.forEach(r => {
         const item = document.createElement('li');
@@ -106,77 +122,125 @@
     }
 
     async function carregarPainel2PS() {
-      const resposta = await fetch('2ps_earthwatch_diario.json');
-      const dados = await resposta.json();
+      try {
+        const resposta = await fetch('2ps_earthwatch_diario.json');
+        const dados = await resposta.json();
 
-      new Chart(document.getElementById('radarSchumann'), {
-        type: 'radar',
-        data: {
-          labels: Object.keys(dados.frequencias_schumann),
-          datasets: [{
-            label: 'Intensidade (Brilho)',
-            data: Object.values(dados.frequencias_schumann),
-            borderColor: '#00ffcc',
-            backgroundColor: 'rgba(0,255,204,0.2)',
-            borderWidth: 2,
-            pointBackgroundColor: '#00ffcc'
-          }]
-        },
-        options: {
-          plugins: {
-            legend: { labels: { color: 'white' } },
-            title: { display: true, text: 'Frequência Schumann', color: 'white' }
+        // Armazenar frequências pra animação
+        frequenciasSchumann = dados.frequencias_schumann;
+
+        // Gráfico Radar Schumann
+        new Chart(document.getElementById('radarSchumann'), {
+          type: 'radar',
+          data: {
+            labels: Object.keys(dados.frequencias_schumann),
+            datasets: [{
+              label: 'Intensidade (Brilho)',
+              data: Object.values(dados.frequencias_schumann),
+              borderColor: '#00ffcc',
+              backgroundColor: 'rgba(0,255,204,0.2)',
+              borderWidth: 2,
+              pointBackgroundColor: '#00ffcc'
+            }]
           },
-          scales: {
-            r: {
-              pointLabels: { color: 'white' },
-              grid: { color: '#333' }
+          options: {
+            plugins: {
+              legend: { labels: { color: 'white' } },
+              title: { display: true, text: 'Frequência Schumann', color: 'white' }
+            },
+            scales: {
+              r: {
+                pointLabels: { color: 'white' },
+                grid: { color: '#333' }
+              }
             }
           }
-        }
-      });
+        });
 
-      new Chart(document.getElementById('kpChart'), {
-        type: 'line',
-        data: {
-          labels: ['-72h', '-48h', '-24h', 'Agora'],
-          datasets: [{
-            label: 'Índice Kp',
-            data: dados.indice_kp.ultimas_72h,
-            borderColor: '#ffaa00',
-            backgroundColor: 'rgba(255,168,0,0.2)',
-            tension: 0.4
-          }]
-        },
-        options: {
-          scales: {
-            y: { beginAtZero: true, max: 9, ticks: { color: 'white' }, grid: { color: '#333' } },
-            x: { ticks: { color: 'white' }, grid: { color: '#333' } }
+        // Gráfico Kp
+        new Chart(document.getElementById('kpChart'), {
+          type: 'line',
+          data: {
+            labels: ['-72h', '-48h', '-24h', 'Agora'],
+            datasets: [{
+              label: 'Índice Kp',
+              data: dados.indice_kp.ultimas_72h,
+              borderColor: '#ffaa00',
+              backgroundColor: 'rgba(255,168,0,0.2)',
+              tension: 0.4
+            }]
           },
-          plugins: {
-            legend: { labels: { color: 'white' } },
-            title: { display: true, text: 'Atividade Geomagnética – Índice Kp', color: 'white' }
+          options: {
+            scales: {
+              y: { beginAtZero: true, max: 9, ticks: { color: 'white' }, grid: { color: '#333' } },
+              x: { ticks: { color: 'white' }, grid: { color: '#333' } }
+            },
+            plugins: {
+              legend: { labels: { color: 'white' } },
+              title: { display: true, text: 'Atividade Geomagnética – Índice Kp', color: 'white' }
+            }
           }
-        }
-      });
+        });
 
-      const map = L.map('map').setView([0, 0], 2);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: 'Map data © OpenStreetMap contributors'
-      }).addTo(map);
-      dados.eventos_sismicos.forEach(s => {
-        L.circleMarker([s.lat, s.lon], {
-          radius: s.magnitude,
-          fillColor: '#ffaa00',
-          color: '#ff8800',
-          weight: 1,
-          fillOpacity: 0.6
-        }).bindPopup(`<strong>${s.local}</strong><br>Magnitude: ${s.magnitude}`).addTo(map);
-      });
+        // Mapa Sísmico
+        const map = L.map('map').setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: 'Map data © OpenStreetMap contributors'
+        }).addTo(map);
+        dados.eventos_sismicos.forEach(s => {
+          L.circleMarker([s.lat, s.lon], {
+            radius: s.magnitude,
+            fillColor: '#ffaa00',
+            color: '#ff8800',
+            weight: 1,
+            fillOpacity: 0.6
+          }).bindPopup(`<strong>${s.local}</strong><br>Magnitude: ${s.magnitude}`).addTo(map);
+        });
 
-      atualizarRiscoBiologico(dados);
+        atualizarRiscoBiologico(dados);
+      } catch (e) {
+        console.error('Erro ao carregar dados:', e);
+      }
     }
 
+    // Animação do Toron com p5.js
+    let intensidadeMedia = 50; // Valor inicial pra animação
+
+    function setup() {
+      let c = createCanvas(400, 400);
+      c.parent('toronCanvas');
+      noFill();
+    }
+
+    function draw() {
+      background(22, 27, 34); // Fundo escuro (#161b22)
+      translate(width / 2, height / 2);
+
+      // Calcular intensidade média das frequências Schumann
+      if (Object.keys(frequenciasSchumann).length > 0) {
+        const valores = Object.values(frequenciasSchumann);
+        intensidadeMedia = valores.reduce((a, b) => a + b, 0) / valores.length;
+      }
+
+      // Parâmetros do toron
+      let raioBase = 80;
+      let raioDinamico = raioBase + intensidadeMedia * 0.3; // Raio varia com a intensidade
+      let velocidadeRotacao = intensidadeMedia * 0.02; // Velocidade varia com a intensidade
+      let brilho = map(intensidadeMedia, 0, 100, 150, 255); // Brilho varia de 150 a 255
+
+      // Desenhar o toron
+      stroke(0, brilho, 204); // Cor ciano com brilho dinâmico (#00ffcc)
+      strokeWeight(2);
+      for (let i = 0; i < 360; i += 10) {
+        let x1 = raioDinamico * cos(radians(i));
+        let y1 = raioDinamico * sin(radians(i));
+        let x2 = (raioDinamico * 0.5) * cos(radians(i + frameCount * velocidadeRotacao));
+        let y2 = (raioDinamico * 0.5) * sin(radians(i + frameCount * velocidadeRotacao));
+        line(x1, y1, x2, y2);
+      }
+    }
+
+    // Carregar o painel
     carregarPainel2PS();
   </script>
 </body>
