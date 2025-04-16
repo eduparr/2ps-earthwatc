@@ -1,3 +1,125 @@
 <!DOCTYPE html>
-<!-- versão final do index.html inserida dinamicamente -->
-<script>window.location.href = "https://chat.openai.com";</script>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2PS Global EarthWatch – Painel de Monitoramento Planetário</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 2rem;
+    }
+    h1 {
+      color: #00ffcc;
+      text-align: center;
+    }
+    canvas {
+      background: #161b22;
+      border-radius: 12px;
+      padding: 1rem;
+      max-width: 600px;
+      margin: 2rem auto;
+    }
+    #map {
+      height: 400px;
+      width: 100%;
+      border-radius: 8px;
+      margin: 2rem 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>2PS Global EarthWatch</h1>
+  <p style="text-align:center;max-width:700px;margin: 0 auto 2rem;font-size:1rem;">
+    Integração de dados vibracionais da Terra: Frequência Schumann, índice Kp solar e sismos globais.
+  </p>
+  <div id="painel">
+    <h2>Radar de Frequência Schumann</h2>
+    <canvas id="radarSchumann"></canvas>
+
+    <h2>Índice Kp – Atividade Solar</h2>
+    <canvas id="kpChart"></canvas>
+
+    <h2>Eventos Sísmicos Recentes</h2>
+    <div id="map"></div>
+  </div>
+
+  <script>
+    async function carregarPainel2PS() {
+      const resposta = await fetch('2ps_earthwatch_diario.json');
+      const dados = await resposta.json();
+
+      new Chart(document.getElementById('radarSchumann'), {
+        type: 'radar',
+        data: {
+          labels: Object.keys(dados.frequencias_schumann),
+          datasets: [{
+            label: 'Intensidade (Brilho)',
+            data: Object.values(dados.frequencias_schumann),
+            borderColor: '#00ffcc',
+            backgroundColor: 'rgba(0,255,204,0.2)',
+            borderWidth: 2,
+            pointBackgroundColor: '#00ffcc'
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { labels: { color: 'white' } },
+            title: { display: true, text: 'Frequência Schumann', color: 'white' }
+          },
+          scales: {
+            r: {
+              pointLabels: { color: 'white' },
+              grid: { color: '#333' }
+            }
+          }
+        }
+      });
+
+      new Chart(document.getElementById('kpChart'), {
+        type: 'line',
+        data: {
+          labels: ['-72h', '-48h', '-24h', 'Agora'],
+          datasets: [{
+            label: 'Índice Kp',
+            data: dados.indice_kp.ultimas_72h,
+            borderColor: '#ffaa00',
+            backgroundColor: 'rgba(255,168,0,0.2)',
+            tension: 0.4
+          }]
+        },
+        options: {
+          scales: {
+            y: { beginAtZero: true, max: 9, ticks: { color: 'white' }, grid: { color: '#333' } },
+            x: { ticks: { color: 'white' }, grid: { color: '#333' } }
+          },
+          plugins: {
+            legend: { labels: { color: 'white' } },
+            title: { display: true, text: 'Atividade Geomagnética – Índice Kp', color: 'white' }
+          }
+        }
+      });
+
+      const map = L.map('map').setView([0, 0], 2);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'Map data © OpenStreetMap contributors'
+      }).addTo(map);
+      dados.eventos_sismicos.forEach(s => {
+        L.circleMarker([s.lat, s.lon], {
+          radius: s.magnitude,
+          fillColor: '#ffaa00',
+          color: '#ff8800',
+          weight: 1,
+          fillOpacity: 0.6
+        }).bindPopup(`<strong>${s.local}</strong><br>Magnitude: ${s.magnitude}`).addTo(map);
+      });
+    }
+    carregarPainel2PS();
+  </script>
+</body>
+</html>
