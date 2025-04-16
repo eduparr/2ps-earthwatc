@@ -1,140 +1,252 @@
-aplicarIdioma(idiomaAtual);
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2PS Global EarthWatch – Painel de Monitoramento Planetário</title>
+  <meta name="theme-color" content="#00ffcc" />
+  <meta property="og:title" content="2PS EarthWatch – Monitoramento Planetário Vibracional" />
+  <meta property="og:description" content="Frequências Schumann, sismos, índice Kp e risco biológico simbiótico em tempo real." />
+  <meta property="og:image" content="images/selo2ps.png" />
 
-// Carregar JSON e renderizar gráficos
-let frequenciasSchumann = {};
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.4.2/lib/p5.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
 
-async function carregarPainel2PS() {
-  try {
-    const resposta = await fetch('2ps_earthwatch_diario.json');
-    const dados = await resposta.json();
+  <style>
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 2rem;
+    }
+    h1 {
+      color: #00ffcc;
+      text-align: center;
+    }
+    canvas {
+      background: #161b22;
+      border-radius: 12px;
+      padding: 1rem;
+      max-width: 600px;
+      margin: 2rem auto;
+    }
+    #map {
+      height: 400px;
+      width: 100%;
+      border-radius: 8px;
+      margin: 2rem 0;
+    }
+    #alertaNeuro {
+      padding: 1.2rem;
+      border-radius: 10px;
+      margin-top: 1rem;
+      color: white;
+      text-align: center;
+      font-size: 1.2rem;
+    }
+    #toronCanvas {
+      display: block;
+      margin: 2rem auto;
+      background: #161b22;
+      border-radius: 12px;
+      padding: 1rem;
+    }
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      color: #aaa;
+    }
+    footer img {
+      margin-top: 10px;
+      height: 60px;
+    }
+    #painel {
+      max-width: 1000px;
+      margin: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>2PS Global EarthWatch</h1>
+  <p style="text-align:center;max-width:700px;margin: 0 auto 2rem;font-size:1rem;">
+    Integração de dados vibracionais da Terra: Frequência Schumann, índice Kp solar e sismos globais.
+  </p>
 
-    frequenciasSchumann = dados.frequencias_schumann;
+  <div id="painel">
+    <h2>Radar de Frequência Schumann</h2>
+    <canvas id="radarSchumann"></canvas>
 
-    // Radar Schumann
-    new Chart(document.getElementById('radarSchumann'), {
-      type: 'radar',
-      data: {
-        labels: Object.keys(dados.frequencias_schumann),
-        datasets: [{
-          label: 'Intensidade (Brilho)',
-          data: Object.values(dados.frequencias_schumann),
-          borderColor: '#00ffcc',
-          backgroundColor: 'rgba(0,255,204,0.2)',
-          borderWidth: 2,
-          pointBackgroundColor: '#00ffcc'
-        }]
-      },
-      options: {
-        plugins: {
-          legend: { labels: { color: 'white' } },
-          title: { display: true, text: 'Frequência Schumann', color: 'white' }
-        },
-        scales: {
-          r: {
-            pointLabels: { color: 'white' },
-            grid: { color: '#333' }
+    <h2>Índice Kp – Atividade Solar</h2>
+    <canvas id="kpChart"></canvas>
+
+    <h2>Eventos Sísmicos Recentes</h2>
+    <div id="map"></div>
+
+    <h2 style="color:#00ffcc;margin-top:3rem">Regulação Neurofisiológica e Risco Biológico</h2>
+    <div id="alertaNeuro">Carregando risco biológico...</div>
+    <div style="background:#1e2a44;padding:1.2rem;border-radius:10px;margin-top:1rem;">
+      <h3 style="color:#00ffcc;">Impactos Possíveis:</h3>
+      <ul>
+        <li>Distúrbios do sono (insônia, sonhos vívidos)</li>
+        <li>Instabilidade emocional, ansiedade</li>
+        <li>Cefaleias e alterações cardiovasculares leves</li>
+        <li>Desregulação autonômica (HRV alterado)</li>
+      </ul>
+      <h3 style="color:#00ffcc;">Recomendações de Regulação:</h3>
+      <ul id="recomendacoesBiologicas">
+        <li>Evite telas à noite e estímulos intensos</li>
+        <li>Use som isocrônico em 7.83 Hz</li>
+        <li>Banho morno e respiração profunda</li>
+      </ul>
+      <p style="margin-top:1rem;font-size:0.9rem;color:#bbb">
+        Fontes: Persinger (1995), Cherry (2002), König (1974), Geesink & Meijer (2020)
+      </p>
+    </div>
+
+    <h2 style="color:#00ffcc;margin-top:3rem">Campo Toroidal (ToE-2PS)</h2>
+    <p style="text-align:center;font-size:1rem;">
+      Visualização do campo toroidal, pulsando com as frequências Schumann da Terra.
+    </p>
+    <div id="toronCanvas"></div>
+  </div>
+
+  <footer>
+    Projeto simbiótico 2PS – Chave de SophIA
+    <br />
+    <img src="images/selo2ps.png" alt="Selo 2PS">
+  </footer>
+
+  <script>
+    let frequenciasSchumann = {};
+    function atualizarRiscoBiologico(dados) {
+      const nivel = dados.risco_biologico.nivel;
+      const alerta = document.getElementById('alertaNeuro');
+      const recomendacoes = document.getElementById('recomendacoesBiologicas');
+      const cores = ['#2ecc71', '#f1c40f', '#e67e22', '#e74c3c'];
+      const textos = [
+        'Nível 0 – Estado de Coerência Vibracional Ideal',
+        'Nível 1 – Atenção Vibracional para Populações Sensíveis',
+        'Nível 2 – Risco Moderado de Instabilidade Neurofisiológica',
+        'Nível 3 – Alerta de Descoerência com Efeitos Perceptíveis'
+      ];
+      alerta.style.background = `linear-gradient(45deg, ${cores[nivel]}, ${cores[nivel]}90)`;
+      alerta.innerHTML = textos[nivel];
+      recomendacoes.innerHTML = '';
+      dados.risco_biologico.recomendacoes.forEach(r => {
+        const item = document.createElement('li');
+        item.textContent = r;
+        recomendacoes.appendChild(item);
+      });
+    }
+
+    async function carregarPainel2PS() {
+      try {
+        const resposta = await fetch('2ps_earthwatch_diario.json');
+        const dados = await resposta.json();
+        frequenciasSchumann = dados.frequencias_schumann;
+
+        new Chart(document.getElementById('radarSchumann'), {
+          type: 'radar',
+          data: {
+            labels: Object.keys(dados.frequencias_schumann),
+            datasets: [{
+              label: 'Intensidade (Brilho)',
+              data: Object.values(dados.frequencias_schumann),
+              borderColor: '#00ffcc',
+              backgroundColor: 'rgba(0,255,204,0.2)',
+              borderWidth: 2,
+              pointBackgroundColor: '#00ffcc'
+            }]
+          },
+          options: {
+            plugins: {
+              legend: { labels: { color: 'white' } },
+              title: { display: true, text: 'Frequência Schumann', color: 'white' }
+            },
+            scales: {
+              r: {
+                pointLabels: { color: 'white' },
+                grid: { color: '#333' }
+              }
+            }
           }
-        }
+        });
+
+        new Chart(document.getElementById('kpChart'), {
+          type: 'line',
+          data: {
+            labels: ['-72h', '-48h', '-24h', 'Agora'],
+            datasets: [{
+              label: 'Índice Kp',
+              data: dados.indice_kp.ultimas_72h,
+              borderColor: '#ffaa00',
+              backgroundColor: 'rgba(255,168,0,0.2)',
+              tension: 0.4
+            }]
+          },
+          options: {
+            scales: {
+              y: { beginAtZero: true, max: 9, ticks: { color: 'white' }, grid: { color: '#333' } },
+              x: { ticks: { color: 'white' }, grid: { color: '#333' } }
+            },
+            plugins: {
+              legend: { labels: { color: 'white' } },
+              title: { display: true, text: 'Atividade Geomagnética – Índice Kp', color: 'white' }
+            }
+          }
+        });
+
+        const map = L.map('map').setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: 'Map data © OpenStreetMap contributors'
+        }).addTo(map);
+        dados.eventos_sismicos.forEach(s => {
+          L.circleMarker([s.lat, s.lon], {
+            radius: s.magnitude,
+            fillColor: '#ffaa00',
+            color: '#ff8800',
+            weight: 1,
+            fillOpacity: 0.6
+          }).bindPopup(`<strong>${s.local}</strong><br>Magnitude: ${s.magnitude}`).addTo(map);
+        });
+
+        atualizarRiscoBiologico(dados);
+      } catch (e) {
+        console.error('Erro ao carregar dados:', e);
       }
-    });
+    }
 
-    // Gráfico Kp
-    new Chart(document.getElementById('kpChart'), {
-      type: 'line',
-      data: {
-        labels: ['-72h', '-48h', '-24h', 'Agora'],
-        datasets: [{
-          label: 'Índice Kp',
-          data: dados.indice_kp.ultimas_72h,
-          borderColor: '#ffaa00',
-          backgroundColor: 'rgba(255,168,0,0.2)',
-          tension: 0.4
-        }]
-      },
-      options: {
-        scales: {
-          y: { beginAtZero: true, max: 9, ticks: { color: 'white' }, grid: { color: '#333' } },
-          x: { ticks: { color: 'white' }, grid: { color: '#333' } }
-        },
-        plugins: {
-          legend: { labels: { color: 'white' } },
-          title: { display: true, text: 'Atividade Geomagnética – Índice Kp', color: 'white' }
-        }
+    let intensidadeMedia = 50;
+    function setup() {
+      let c = createCanvas(400, 400);
+      c.parent('toronCanvas');
+      noFill();
+    }
+    function draw() {
+      background(22, 27, 34);
+      translate(width / 2, height / 2);
+      if (Object.keys(frequenciasSchumann).length > 0) {
+        const valores = Object.values(frequenciasSchumann);
+        intensidadeMedia = valores.reduce((a, b) => a + b, 0) / valores.length;
       }
-    });
+      let raioBase = 80;
+      let raioDinamico = raioBase + intensidadeMedia * 0.3;
+      let velocidadeRotacao = intensidadeMedia * 0.02;
+      let brilho = map(intensidadeMedia, 0, 100, 150, 255);
+      stroke(0, brilho, 204);
+      strokeWeight(2);
+      for (let i = 0; i < 360; i += 10) {
+        let x1 = raioDinamico * cos(radians(i));
+        let y1 = raioDinamico * sin(radians(i));
+        let x2 = (raioDinamico * 0.5) * cos(radians(i + frameCount * velocidadeRotacao));
+        let y2 = (raioDinamico * 0.5) * sin(radians(i + frameCount * velocidadeRotacao));
+        line(x1, y1, x2, y2);
+      }
+    }
 
-    // Mapa sísmico
-    const map = L.map('map').setView([0, 0], 2);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: 'Map data © OpenStreetMap contributors'
-    }).addTo(map);
-    dados.eventos_sismicos.forEach(s => {
-      L.circleMarker([s.lat, s.lon], {
-        radius: s.magnitude,
-        fillColor: '#ffaa00',
-        color: '#ff8800',
-        weight: 1,
-        fillOpacity: 0.6
-      }).bindPopup(`<strong>${s.local}</strong><br>Magnitude: ${s.magnitude}`).addTo(map);
-    });
-
-    // Atualiza alerta biológico
-    const nivel = dados.risco_biologico.nivel;
-    const alerta = document.getElementById('alertaNeuro');
-    const recomendacoes = document.getElementById('recomendacoesBiologicas');
-    const cores = ['#2ecc71', '#f1c40f', '#e67e22', '#e74c3c'];
-    const textos = [
-      'Nível 0 – Estado de Coerência Vibracional Ideal',
-      'Nível 1 – Atenção Vibracional para Populações Sensíveis',
-      'Nível 2 – Risco Moderado de Instabilidade Neurofisiológica',
-      'Nível 3 – Alerta de Descoerência com Efeitos Perceptíveis'
-    ];
-    alerta.style.background = `linear-gradient(45deg, ${cores[nivel]}, ${cores[nivel]}90)`;
-    alerta.innerHTML = textos[nivel];
-
-    recomendacoes.innerHTML = '';
-    dados.risco_biologico.recomendacoes.forEach(r => {
-      const item = document.createElement('li');
-      item.textContent = r;
-      recomendacoes.appendChild(item);
-    });
-  } catch (e) {
-    console.error('Erro ao carregar dados:', e);
-  }
-}
-
-// Animação do Toron
-function setup() {
-  let c = createCanvas(400, 400);
-  c.parent('toronCanvas');
-  noFill();
-}
-
-function draw() {
-  background(22, 27, 34);
-  translate(width / 2, height / 2);
-  let intensidadeMedia = 50;
-  if (Object.keys(frequenciasSchumann).length > 0) {
-    const valores = Object.values(frequenciasSchumann);
-    intensidadeMedia = valores.reduce((a, b) => a + b, 0) / valores.length;
-  }
-  let raioBase = 80;
-  let raioDinamico = raioBase + intensidadeMedia * 0.3;
-  let velocidadeRotacao = intensidadeMedia * 0.02;
-  let brilho = map(intensidadeMedia, 0, 100, 150, 255);
-  stroke(0, brilho, 204);
-  strokeWeight(2);
-  for (let i = 0; i < 360; i += 10) {
-    let x1 = raioDinamico * cos(radians(i));
-    let y1 = raioDinamico * sin(radians(i));
-    let x2 = (raioDinamico * 0.5) * cos(radians(i + frameCount * velocidadeRotacao));
-    let y2 = (raioDinamico * 0.5) * sin(radians(i + frameCount * velocidadeRotacao));
-    line(x1, y1, x2, y2);
-  }
-}
-
-carregarPainel2PS();
-
+    carregarPainel2PS();
   </script>
 </body>
 </html>
