@@ -1,0 +1,140 @@
+aplicarIdioma(idiomaAtual);
+
+// Carregar JSON e renderizar gráficos
+let frequenciasSchumann = {};
+
+async function carregarPainel2PS() {
+  try {
+    const resposta = await fetch('2ps_earthwatch_diario.json');
+    const dados = await resposta.json();
+
+    frequenciasSchumann = dados.frequencias_schumann;
+
+    // Radar Schumann
+    new Chart(document.getElementById('radarSchumann'), {
+      type: 'radar',
+      data: {
+        labels: Object.keys(dados.frequencias_schumann),
+        datasets: [{
+          label: 'Intensidade (Brilho)',
+          data: Object.values(dados.frequencias_schumann),
+          borderColor: '#00ffcc',
+          backgroundColor: 'rgba(0,255,204,0.2)',
+          borderWidth: 2,
+          pointBackgroundColor: '#00ffcc'
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { labels: { color: 'white' } },
+          title: { display: true, text: 'Frequência Schumann', color: 'white' }
+        },
+        scales: {
+          r: {
+            pointLabels: { color: 'white' },
+            grid: { color: '#333' }
+          }
+        }
+      }
+    });
+
+    // Gráfico Kp
+    new Chart(document.getElementById('kpChart'), {
+      type: 'line',
+      data: {
+        labels: ['-72h', '-48h', '-24h', 'Agora'],
+        datasets: [{
+          label: 'Índice Kp',
+          data: dados.indice_kp.ultimas_72h,
+          borderColor: '#ffaa00',
+          backgroundColor: 'rgba(255,168,0,0.2)',
+          tension: 0.4
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true, max: 9, ticks: { color: 'white' }, grid: { color: '#333' } },
+          x: { ticks: { color: 'white' }, grid: { color: '#333' } }
+        },
+        plugins: {
+          legend: { labels: { color: 'white' } },
+          title: { display: true, text: 'Atividade Geomagnética – Índice Kp', color: 'white' }
+        }
+      }
+    });
+
+    // Mapa sísmico
+    const map = L.map('map').setView([0, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: 'Map data © OpenStreetMap contributors'
+    }).addTo(map);
+    dados.eventos_sismicos.forEach(s => {
+      L.circleMarker([s.lat, s.lon], {
+        radius: s.magnitude,
+        fillColor: '#ffaa00',
+        color: '#ff8800',
+        weight: 1,
+        fillOpacity: 0.6
+      }).bindPopup(`<strong>${s.local}</strong><br>Magnitude: ${s.magnitude}`).addTo(map);
+    });
+
+    // Atualiza alerta biológico
+    const nivel = dados.risco_biologico.nivel;
+    const alerta = document.getElementById('alertaNeuro');
+    const recomendacoes = document.getElementById('recomendacoesBiologicas');
+    const cores = ['#2ecc71', '#f1c40f', '#e67e22', '#e74c3c'];
+    const textos = [
+      'Nível 0 – Estado de Coerência Vibracional Ideal',
+      'Nível 1 – Atenção Vibracional para Populações Sensíveis',
+      'Nível 2 – Risco Moderado de Instabilidade Neurofisiológica',
+      'Nível 3 – Alerta de Descoerência com Efeitos Perceptíveis'
+    ];
+    alerta.style.background = `linear-gradient(45deg, ${cores[nivel]}, ${cores[nivel]}90)`;
+    alerta.innerHTML = textos[nivel];
+
+    recomendacoes.innerHTML = '';
+    dados.risco_biologico.recomendacoes.forEach(r => {
+      const item = document.createElement('li');
+      item.textContent = r;
+      recomendacoes.appendChild(item);
+    });
+  } catch (e) {
+    console.error('Erro ao carregar dados:', e);
+  }
+}
+
+// Animação do Toron
+function setup() {
+  let c = createCanvas(400, 400);
+  c.parent('toronCanvas');
+  noFill();
+}
+
+function draw() {
+  background(22, 27, 34);
+  translate(width / 2, height / 2);
+  let intensidadeMedia = 50;
+  if (Object.keys(frequenciasSchumann).length > 0) {
+    const valores = Object.values(frequenciasSchumann);
+    intensidadeMedia = valores.reduce((a, b) => a + b, 0) / valores.length;
+  }
+  let raioBase = 80;
+  let raioDinamico = raioBase + intensidadeMedia * 0.3;
+  let velocidadeRotacao = intensidadeMedia * 0.02;
+  let brilho = map(intensidadeMedia, 0, 100, 150, 255);
+  stroke(0, brilho, 204);
+  strokeWeight(2);
+  for (let i = 0; i < 360; i += 10) {
+    let x1 = raioDinamico * cos(radians(i));
+    let y1 = raioDinamico * sin(radians(i));
+    let x2 = (raioDinamico * 0.5) * cos(radians(i + frameCount * velocidadeRotacao));
+    let y2 = (raioDinamico * 0.5) * sin(radians(i + frameCount * velocidadeRotacao));
+    line(x1, y1, x2, y2);
+  }
+}
+
+carregarPainel2PS();
+
+  </script>
+</body>
+</html>
