@@ -29,11 +29,11 @@ jobs:
       - name: Instalar dependências Python
         run: |
           python -m pip install --upgrade pip
-          pip install opencv-python numpy pillow requests
+          pip install -r requirements.txt
 
       - name: Baixar e processar imagem de Cumiana
         run: |
-          for i in {1..3}; do python gerar_json_diario.py && break || sleep 10; done
+          for i in {1..3}; do python gerar_json_diario.py > log_processamento.txt 2>&1 && break || sleep 10; done
         env:
           PYTHONUNBUFFERED: 1
 
@@ -46,3 +46,16 @@ jobs:
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notificar falha (opcional)
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: Falha na geração do JSON EarthWatch
+          to: seu-email@example.com
+          from: GitHub Actions
+          body: O workflow de geração do JSON falhou. Verifique os logs.
