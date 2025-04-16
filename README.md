@@ -2,7 +2,7 @@
 # 2PS EarthWatch â€“ Painel de Monitoramento PlanetÃ¡rio
 
 **Desenvolvido por: Eduardo Parra (2PS)**  
-**URL do painel:** [https://seuusuario.github.io/2ps-earthwatch](https://seuusuario.github.io/2ps-earthwatch)
+**URL do painel:** [https://eduparr.github.io/2ps-earthwatch](https://seuusuario.github.io/2ps-earthwatch)
 
 ---
 
