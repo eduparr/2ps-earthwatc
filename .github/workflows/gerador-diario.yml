@@ -1,0 +1,32 @@
+name: Gerar JSON Diário EarthWatch
+
+on:
+  schedule:
+    - cron: "0 3 * * *"  # Executa todos os dias às 3h UTC (0h no Brasil)
+  workflow_dispatch:      # Permite rodar manualmente
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar repositório
+        uses: actions/checkout@v3
+
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Rodar script de geração
+        run: |
+          pip install -r requirements.txt || true
+          python scripts/gerar_json_diario.py
+
+      - name: Commit de atualização
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add 2ps_earthwatch_diario.json
+          git commit -m "Atualização automática do JSON diário [bot]" || echo "Nada novo"
+          git push
