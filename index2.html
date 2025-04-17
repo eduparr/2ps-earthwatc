@@ -8,12 +8,10 @@
   <meta property="og:title" content="2PS EarthWatch – Monitoramento Planetário Vibracional" />
   <meta property="og:description" content="Frequências Schumann, sismos, índice Kp e risco biológico simbiótico em tempo real." />
   <meta property="og:image" content="images/selo2ps.png" />
-
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/p5@1.4.2/lib/p5.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-
   <style>
     body {
       background: #0d1117;
@@ -116,18 +114,109 @@
   <footer>
     Projeto simbiótico 2PS – Chave de SophIA
     <br />
-    <img src="selo2ps.png" alt="Selo 2PS" />
+    <img src="images/selo2ps.png" alt="Selo 2PS" />
   </footer>
 
   <script>
     let frequenciasSchumann = {};
+
+    function atualizarRiscoBiologico(dados) {
+      const nivel = dados.risco_biologico.nivel;
+      const alerta = document.getElementById('alertaNeuro');
+      const recomendacoes = document.getElementById('recomendacoesBiologicas');
+
+      const cores = ['#2ecc71', '#f1c40f', '#e67e22', '#e74c3c'];
+      const textos = [
+        'Nível 0 – Estado de Coerência Vibracional Ideal',
+        'Nível 1 – Atenção Vibracional para Populações Sensíveis',
+        'Nível 2 – Risco Moderado de Instabilidade Neurofisiológica',
+        'Nível 3 – Alerta de Descoerência com Efeitos Perceptíveis'
+      ];
+
+      alerta.style.background = `linear-gradient(45deg, ${cores[nivel]}, ${cores[nivel]}90)`;
+      alerta.innerHTML = textos[nivel];
+
+      recomendacoes.innerHTML = '';
+      dados.risco_biologico.recomendacoes.forEach(r => {
+        const item = document.createElement('li');
+        item.textContent = r;
+        recomendacoes.appendChild(item);
+      });
+    }
+
     async function carregarPainel2PS() {
       try {
         const resposta = await fetch('2ps_earthwatch_diario.json');
         const dados = await resposta.json();
+
         frequenciasSchumann = dados.frequencias_schumann;
-        // Gráficos Schumann e Kp omitidos aqui por brevidade
-        // Mapa sísmico + alerta neurofisiológico também
+
+        new Chart(document.getElementById('radarSchumann'), {
+          type: 'radar',
+          data: {
+            labels: Object.keys(dados.frequencias_schumann),
+            datasets: [{
+              label: 'Intensidade (Brilho)',
+              data: Object.values(dados.frequencias_schumann),
+              borderColor: '#00ffcc',
+              backgroundColor: 'rgba(0,255,204,0.2)',
+              borderWidth: 2,
+              pointBackgroundColor: '#00ffcc'
+            }]
+          },
+          options: {
+            plugins: {
+              legend: { labels: { color: 'white' } },
+              title: { display: true, text: 'Frequência Schumann', color: 'white' }
+            },
+            scales: {
+              r: {
+                pointLabels: { color: 'white' },
+                grid: { color: '#333' }
+              }
+            }
+          }
+        });
+
+        new Chart(document.getElementById('kpChart'), {
+          type: 'line',
+          data: {
+            labels: ['-72h', '-48h', '-24h', 'Agora'],
+            datasets: [{
+              label: 'Índice Kp',
+              data: dados.indice_kp.ultimas_72h,
+              borderColor: '#ffaa00',
+              backgroundColor: 'rgba(255,168,0,0.2)',
+              tension: 0.4
+            }]
+          },
+          options: {
+            scales: {
+              y: { beginAtZero: true, max: 9, ticks: { color: 'white' }, grid: { color: '#333' } },
+              x: { ticks: { color: 'white' }, grid: { color: '#333' } }
+            },
+            plugins: {
+              legend: { labels: { color: 'white' } },
+              title: { display: true, text: 'Atividade Geomagnética – Índice Kp', color: 'white' }
+            }
+          }
+        });
+
+        const map = L.map('map').setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: 'Map data © OpenStreetMap contributors'
+        }).addTo(map);
+        dados.eventos_sismicos.forEach(s => {
+          L.circleMarker([s.lat, s.lon], {
+            radius: s.magnitude,
+            fillColor: '#ffaa00',
+            color: '#ff8800',
+            weight: 1,
+            fillOpacity: 0.6
+          }).bindPopup(`<strong>${s.local}</strong><br>Magnitude: ${s.magnitude}`).addTo(map);
+        });
+
+        atualizarRiscoBiologico(dados);
       } catch (e) {
         console.error('Erro ao carregar dados:', e);
       }
