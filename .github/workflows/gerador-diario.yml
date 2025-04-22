@@ -42,16 +42,20 @@ jobs:
         env:
           PYTHONUNBUFFERED: 1
 
+      - name: Gerar arquivo de timestamp simbólico
+        run: |
+          echo "Última atualização: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" > .update_timestamp
+
       - name: Verificar estado do Git antes do commit
         run: |
           git status
           git remote -v
           git log -1 || echo "Nenhum commit anterior"
 
-      - name: Commit e push do novo JSON
+      - name: Commit e push do novo JSON e timestamp
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
-          git add 2ps_earthwatch_diario.json || echo "Nada para adicionar"
+          git add 2ps_earthwatch_diario.json .update_timestamp || echo "Nada para adicionar"
           git commit -m "Atualização automática do JSON EarthWatch - $(date +'%Y-%m-%d')" || echo "Nada novo para commit"
           git push || echo "Falha ao fazer push. Verifique permissões."
