@@ -8,11 +8,13 @@ on:
 jobs:
   gerar-json:
     runs-on: ubuntu-latest
+
     steps:
       - name: Clonar repositório
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
 
       - name: Configurar Python
         uses: actions/setup-python@v4
@@ -31,31 +33,31 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Verificar instalação do OpenCV
+        run: python -c "import cv2; print('OpenCV version:', cv2.__version__)"
+
       - name: Baixar e processar imagem de Cumiana
         run: |
-          for i in {1..3}; do python gerar_json_diario.py > log_processamento.txt 2>&1 && break || sleep 10; done
+          for i in {1..3}; do python  2ps-earthwatc/gerar_json_diario.py > log_processamento.txt 2>&1 && break || sleep 10; done
         env:
           PYTHONUNBUFFERED: 1
 
-      - name: Commit e push do novo JSON
+      - name: Gerar arquivo de timestamp simbólico
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git add 2ps_earthwatch_diario.json
-          git commit -m "Atualização automática do JSON EarthWatch - $(date +'%Y-%m-%d')" || echo "Nada novo para commit"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "Última atualização: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" > .update_timestamp
 
-      - name: Notificar falha (opcional)
-        if: failure()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          username: ${{ secrets.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          subject: Falha na geração do JSON EarthWatch
-          to: seu-email@example.com
-          from: GitHub Actions
-          body: O workflow de geração do JSON falhou. Verifique os logs.
+      - name: Verificar estado do Git antes do commit
+        run: |
+          git status
+          git remote -v
+          git log -1 || echo "Nenhum commit anterior"
+
+      - name: Commit e push do novo JSON e timestamp
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add 2ps-earthwatc/2ps_earthwatch_diario.json .update_timestamp || echo "Nada para adicionar"
+          git commit -m "Atualização automática do JSON EarthWatch - $(date +'%Y-%m-%d')" || echo "Nada novo para commit"
+          git push || echo "Falha ao fazer push. Verifique permissões."
+
+          
