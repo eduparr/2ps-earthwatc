@@ -7,20 +7,18 @@ import json
 from datetime import datetime
 import random
 
-def baixar_espectrograma_cumiana(data):
+def baixar_espectrograma_cumiana():
     """
-    Baixa a imagem de espectrograma de Cumiana para a data fornecida.
+    Baixa a imagem de espectrograma mais recente de Cumiana.
     
-    Args:
-        data (str): Data no formato YYYY-MM-DD
-        
     Returns:
         str: Caminho do arquivo de imagem salvo
     """
-    url = f"http://www.vlf.it/cumiana/strips/{data}.png"
+    url = "http://www.vlf.it/cumiana/last-geophone-multistrip-slow.jpg"
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
+        print(f"Imagem baixada com sucesso: {url}")
     except requests.RequestException as e:
         raise ValueError(f"Falha ao baixar a imagem de Cumiana: {e}")
     
@@ -29,16 +27,13 @@ def baixar_espectrograma_cumiana(data):
     img.save(caminho_imagem)
     return caminho_imagem
 
-def processar_espectrograma(caminho_imagem, faixas_frequencia, altura_util, largura_util, margens):
+def processar_espectrograma(caminho_imagem, faixas_frequencia):
     """
     Processa uma imagem de espectrograma Schumann e extrai intensidades.
     
     Args:
         caminho_imagem (str): Caminho para a imagem .png
         faixas_frequencia (dict): Mapeamento de frequências para posições Y relativas (0 a 1)
-        altura_util (int): Altura da área útil em pixels
-        largura_util (int): Largura da área útil em pixels
-        margens (tuple): Margens pra recortar (esquerda, topo, direita, baixo)
     
     Returns:
         dict: Dicionário com intensidades por frequência (ex.: {"7.83 Hz": 86, ...})
@@ -47,7 +42,17 @@ def processar_espectrograma(caminho_imagem, faixas_frequencia, altura_util, larg
     if img is None:
         raise ValueError("Não foi possível carregar a imagem")
     
-    x_start, y_start, x_end, y_end = margens
+    # Detectar dimensões da imagem
+    altura, largura, _ = img.shape
+    print(f"Dimensões da imagem: {largura}x{altura}")
+
+    # Ajustar margens dinamicamente com base nas dimensões
+    margem_percent = 0.05  # 5% de margem em cada lado
+    x_start = int(largura * margem_percent)
+    y_start = int(altura * margem_percent)
+    x_end = int(largura * margem_percent)
+    y_end = int(altura * margem_percent)
+
     img_cortada = img[y_start:-y_end, x_start:-x_end]
     img_gray = cv2.cvtColor(img_cortada, cv2.COLOR_BGR2GRAY)
     ultima_coluna = img_gray[:, -1]
@@ -59,13 +64,14 @@ def processar_espectrograma(caminho_imagem, faixas_frequencia, altura_util, larg
         intensidade_raw = ultima_coluna[y_idx]
         intensidade = int((intensidade_raw / 255) * 100)
         intensidades[freq] = intensidade
+        print(f"Frequência {freq}: Intensidade raw={intensidade_raw}, normalizada={intensidade}")
     
     return intensidades
 
 def gerar_json_diario():
     # Baixar imagem de Cumiana
     data_atual = datetime.utcnow().strftime("%Y-%m-%d")
-    caminho_imagem = baixar_espectrograma_cumiana(data_atual)
+    caminho_imagem = baixar_espectrograma_cumiana()
 
     # Processar frequências Schumann (imagens de Cumiana vão até 49 Hz)
     faixas_frequencia = {
@@ -77,11 +83,8 @@ def gerar_json_diario():
         "38 Hz": 38 / 49,
         "44 Hz": 44 / 49
     }
-    altura_util = 400
-    largura_util = 800
-    margens = (50, 50, 50, 50)  # esquerda, topo, direita, baixo
     try:
-        frequencias = processar_espectrograma(caminho_imagem, faixas_frequencia, altura_util, largura_util, margens)
+        frequencias = processar_espectrograma(caminho_imagem, faixas_frequencia)
     except Exception as e:
         print(f"Erro ao processar espectrograma: {e}")
         # Fallback: usar valores mockados se falhar
@@ -94,6 +97,7 @@ def gerar_json_diario():
             "38 Hz": random.randint(78, 90),
             "44 Hz": random.randint(85, 95)
         }
+        print("Usando valores mockados devido a erro no processamento")
 
     # Dados mockados pra Kp e sismos (substituir por APIs reais no futuro)
     kp_valores = [random.randint(2, 6) for _ in range(4)]
@@ -121,6 +125,7 @@ def gerar_json_diario():
     # Montar o JSON
     resultado = {
         "data": data_atual,
+        "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"),
         "frequencias_schumann": frequencias,
         "indice_kp": {
             "ultimas_72h": kp_valores,
@@ -142,6 +147,7 @@ def gerar_json_diario():
     # Salvar JSON
     with open("2ps_earthwatch_diario.json", "w") as f:
         json.dump(resultado, f, indent=2)
+    print("JSON gerado com sucesso")
 
 if __name__ == "__main__":
     gerar_json_diario()
