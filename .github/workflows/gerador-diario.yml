@@ -60,5 +60,4 @@ jobs:
           git commit -m "Atualização automática do JSON EarthWatch - $(date +'%Y-%m-%d')" || echo "Nada novo para commit"
           git push || echo "Falha ao fazer push. Verifique permissões."
 
-          env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
